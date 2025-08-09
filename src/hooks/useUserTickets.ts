@@ -26,9 +26,7 @@ export const useUserTickets = () => {
 
       // Method 1: Try direct ownerOf check (works for any ERC721)
       try {
-        // This is a brute-force approach that checks token IDs sequentially
-        // You might want to limit the range or make it configurable
-        const MAX_TOKENS_TO_CHECK = 1000; // Adjust based on your contract
+        const MAX_TOKENS_TO_CHECK = 1000;
         for (let tokenId = 1; tokenId <= MAX_TOKENS_TO_CHECK; tokenId++) {
           try {
             const owner = await contract.ownerOf(tokenId);
@@ -39,10 +37,13 @@ export const useUserTickets = () => {
             // Token likely doesn't exist, skip
           }
         }
+        // Deduplicate after loop finishes
+        tokenIds = Array.from(new Set(tokenIds));
         console.log('🎟 Token IDs from ownerOf check:', tokenIds);
       } catch (methodError) {
         console.error('❌ Error using ownerOf method:', methodError);
       }
+
 
       // Method 2: Fallback to event filtering
       if (tokenIds.length === 0) {
@@ -91,6 +92,11 @@ export const useUserTickets = () => {
       });
 
       const userTickets = (await Promise.all(ticketPromises)).filter(t => t !== null) as UserTicketWithDetails[];
+      const uniqueTicketsMap = new Map<number, UserTicketWithDetails>();
+      for (const t of userTickets) {
+        uniqueTicketsMap.set(t.tokenId, t);
+      }
+      const uniqueTickets = Array.from(uniqueTicketsMap.values());
       setTickets(userTickets);
     } catch (err) {
       console.error('❌ Error in fetchUserTickets:', err);
