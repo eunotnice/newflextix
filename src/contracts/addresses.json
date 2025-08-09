@@ -1,0 +1,8 @@
+{
+  "EventTicketing": "",
+  "BlindBagNFT": "",
+  "network": {
+    "chainId": 11155111,
+    "name": "sepolia"
+  }
+}
