@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, Users, Clock, Ticket, Star, ArrowLeft, ExternalLink } from 'lucide-react'
-import { useEventContract, Event, TicketTier } from '../hooks/useEventContract'
+import { useEventContract, Event, TicketTier, BlindBagReward } from '../hooks/useEventContract'
 import { useWeb3 } from '../context/Web3Context'
 import { ethers } from 'ethers'
 import toast from 'react-hot-toast'
@@ -10,29 +10,40 @@ const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isConnected, connectWallet } = useWeb3()
-  const { getEvent, getEventTiers, getTicketTier, purchaseTicket, loading } = useEventContract()
+  const { contract, getEvent, getEventTiers, getTicketTier, purchaseTicket, loading, getEventRewardsDetails } = useEventContract()
   
   const [event, setEvent] = useState<Event | null>(null)
   const [tiers, setTiers] = useState<TicketTier[]>([])
+  const [rewards, setRewards] = useState<BlindBagReward[]>([])
   const [selectedTier, setSelectedTier] = useState<TicketTier | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [eventLoading, setEventLoading] = useState(true)
 
   useEffect(() => {
     const fetchEventData = async () => {
-      if (!id) return
+      if (!contract || !id) return // 🔒 Wait until contract is ready
+
+      const eventId = parseInt(id)
+      if (isNaN(eventId)) {
+        toast.error('Invalid event ID')
+        navigate('/events')
+        return
+      }
 
       try {
         setEventLoading(true)
-        const eventId = parseInt(id)
-        
+
         // Fetch event details
+        console.log('🔍 Trying to fetch event ID:', eventId)
         const eventData = await getEvent(eventId)
+        console.log('📦 Event data:', eventData)
+
         if (!eventData) {
-          toast.error('Event not found')
-          navigate('/events')
+          toast.error(`Event with ID ${eventId} not found or failed to load`)
+          setEvent(null)
           return
         }
+
         setEvent(eventData)
 
         // Fetch ticket tiers
@@ -40,13 +51,18 @@ const EventDetails: React.FC = () => {
         const tierPromises = tierIds.map(tierId => getTicketTier(tierId))
         const tiersData = await Promise.all(tierPromises)
         const validTiers = tiersData.filter((tier): tier is TicketTier => tier !== null)
-        setTiers(validTiers)
 
+        setTiers(validTiers)
         if (validTiers.length > 0) {
           setSelectedTier(validTiers[0])
         }
+
+        // Fetch blind bag rewards (stickers) and their percentages
+        const rewardDetails = await getEventRewardsDetails(eventId)
+        setRewards(rewardDetails)
+
       } catch (error) {
-        console.error('Error fetching event data:', error)
+        console.error('❌ Error fetching event data:', error)
         toast.error('Failed to load event details')
       } finally {
         setEventLoading(false)
@@ -54,7 +70,8 @@ const EventDetails: React.FC = () => {
     }
 
     fetchEventData()
-  }, [id])
+  }, [contract, id]) // ✅ Add `contract` to dependencies
+
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -223,6 +240,25 @@ const EventDetails: React.FC = () => {
                 <div className="border-t border-white/20 pt-6">
                   <h2 className="text-xl font-bold text-white mb-3">About This Event</h2>
                   <p className="text-purple-200 leading-relaxed">{event.description}</p>
+                </div>
+
+                <div className="border-t border-white/20 pt-6 mt-6">
+                  <h2 className="text-xl font-bold text-white mb-4">Stickers & Chances</h2>
+                  {rewards.length === 0 ? (
+                    <p className="text-purple-200">No stickers configured for this event.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {rewards.map((r) => (
+                        <div key={r.rewardId} className="bg-white/5 rounded-xl p-4 border border-white/10 flex items-center space-x-4">
+                          <img src={r.metadataUri} alt={r.name} className="w-16 h-16 rounded-lg object-cover border border-white/20" />
+                          <div className="flex-1">
+                            <div className="text-white font-semibold">{r.name}</div>
+                            <div className="text-purple-300 text-sm">Chance: {r.rarity}%</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

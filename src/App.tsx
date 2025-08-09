@@ -9,6 +9,7 @@ import CreateEvent from './pages/CreateEvent'
 import MyTickets from './pages/MyTickets'
 import Profile from './pages/Profile'
 import { Web3Provider } from './context/Web3Context'
+import TicketDetails from './pages/TicketDetails'
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
                 <Route path="/events/:id" element={<EventDetails />} />
                 <Route path="/create-event" element={<CreateEvent />} />
                 <Route path="/my-tickets" element={<MyTickets />} />
+                <Route path="/ticketdetails/:tokenId" element={<TicketDetails />} />
                 <Route path="/profile" element={<Profile />} />
               </Routes>
             </main>

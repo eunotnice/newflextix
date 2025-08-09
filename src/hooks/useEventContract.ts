@@ -5,940 +5,17 @@ import toast from 'react-hot-toast'
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_EVENT_TICKETING_CONTRACT
 
-// Contract ABI embedded directly to avoid build issues
-const EVENT_TICKETING_ABI = [
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "ERC721IncorrectOwner",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "ERC721InsufficientApproval",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "approver",
-        "type": "address"
-      }
-    ],
-    "name": "ERC721InvalidApprover",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      }
-    ],
-    "name": "ERC721InvalidOperator",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "ERC721InvalidOwner",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      }
-    ],
-    "name": "ERC721InvalidReceiver",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
-    ],
-    "name": "ERC721InvalidSender",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "ERC721NonexistentToken",
-    "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "approved",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "Approval",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "approved",
-        "type": "bool"
-      }
-    ],
-    "name": "ApprovalForAll",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "organizer",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "startTime",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "endTime",
-        "type": "uint256"
-      }
-    ],
-    "name": "EventCreated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "organizer",
-        "type": "address"
-      }
-    ],
-    "name": "EventEnded",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tierId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "price",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "maxSupply",
-        "type": "uint256"
-      }
-    ],
-    "name": "TierCreated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tierId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "buyer",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "quantity",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "totalPrice",
-        "type": "uint256"
-      }
-    ],
-    "name": "TicketPurchased",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      }
-    ],
-    "name": "TicketUsed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "Transfer",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "approve",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "balanceOf",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "description",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "imageUri",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "startTime",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "endTime",
-        "type": "uint256"
-      }
-    ],
-    "name": "createEvent",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "price",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxSupply",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxPerWallet",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "metadataUri",
-        "type": "string"
-      }
-    ],
-    "name": "createTicketTier",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      }
-    ],
-    "name": "endEvent",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "events",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "description",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "imageUri",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "organizer",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "startTime",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "endTime",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "isActive",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "hasEnded",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getApproved",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getEventTiers",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getUserTickets",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      }
-    ],
-    "name": "isApprovedForAll",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "name",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "ownerOf",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tierId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "quantity",
-        "type": "uint256"
-      }
-    ],
-    "name": "purchaseTicket",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "safeTransferFrom",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "safeTransferFrom",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "approved",
-        "type": "bool"
-      }
-    ],
-    "name": "setApprovalForAll",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes4",
-        "name": "interfaceId",
-        "type": "bytes4"
-      }
-    ],
-    "name": "supportsInterface",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "ticketTiers",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "tierId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "price",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxSupply",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "currentSupply",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "maxPerWallet",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "metadataUri",
-        "type": "string"
-      },
-      {
-        "internalType": "bool",
-        "name": "isActive",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "tickets",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "eventId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tierId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "isUsed",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "purchaseTime",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "tokenURI",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "transferFrom",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "useTicket",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-]
+// Import the actual ABI from the JSON file
+import contractData from '../contracts/EventTicketing.json'
+
+const EVENT_TICKETING_ABI = JSON.parse(contractData.abi)
+
+// Debug environment variables
+console.log('=== ENVIRONMENT VARIABLES ===')
+console.log("🧪 VITE_TESTING_ENV_VAR:", import.meta.env.VITE_TESTING_ENV_VAR)
+console.log('VITE_EVENT_TICKETING_CONTRACT:', import.meta.env.VITE_EVENT_TICKETING_CONTRACT)
+console.log('CONTRACT_ADDRESS:', CONTRACT_ADDRESS)
+console.log('All env vars:', import.meta.env)
 
 export interface Event {
   eventId: number
@@ -950,6 +27,7 @@ export interface Event {
   endTime: number
   isActive: boolean
   hasEnded: boolean
+  stickers: string[]
 }
 
 export interface TicketTier {
@@ -961,6 +39,15 @@ export interface TicketTier {
   currentSupply: number
   maxPerWallet: number
   metadataUri: string
+  isActive: boolean
+}
+
+export interface BlindBagReward {
+  rewardId: number
+  eventId: number
+  name: string
+  metadataUri: string
+  rarity: number
   isActive: boolean
 }
 
@@ -979,36 +66,106 @@ export const useEventContract = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    console.log('=== CONTRACT INITIALIZATION ===')
+    console.log('Provider available:', !!provider)
+    console.log('Signer available:', !!signer)
+    console.log('Is connected:', isConnected)
+    console.log('CONTRACT_ADDRESS:', CONTRACT_ADDRESS)
+    console.log('CONTRACT_ADDRESS type:', typeof CONTRACT_ADDRESS)
+    console.log('CONTRACT_ADDRESS length:', CONTRACT_ADDRESS?.length)
+    
     if (provider && CONTRACT_ADDRESS) {
-      const eventContract = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        EVENT_TICKETING_ABI,
-        provider
-      )
-      setContract(eventContract)
+      console.log('✅ Creating contract instance...')
+      try {
+        // Validate contract address format
+        if (!CONTRACT_ADDRESS.startsWith('0x') || CONTRACT_ADDRESS.length !== 42) {
+          console.error('❌ Invalid contract address format:', CONTRACT_ADDRESS)
+          setContract(null)
+          return
+        }
+        
+        const eventContract = new ethers.Contract(
+          CONTRACT_ADDRESS,
+          EVENT_TICKETING_ABI,
+          provider
+        )
+        setContract(eventContract)
+        console.log('✅ Contract instance created successfully')
+        
+        /*
+        // Test the contract
+        eventContract.name().then((name: string) => {
+          console.log('✅ Contract name:', name)
+        }).catch((error: any) => {
+          console.error('❌ Failed to get contract name:', error)
+        })
+          */
+        
+        // Test contract address
+        eventContract.getAddress().then((address: string) => {
+          console.log('✅ Contract address from contract:', address)
+        }).catch((error: any) => {
+          console.error('❌ Failed to get contract address:', error)
+        })
+      } catch (error) {
+        console.error('❌ Error creating contract instance:', error)
+        setContract(null)
+      }
+    } else {
+      console.log('❌ Missing provider or contract address')
+      console.log('Provider:', !!provider)
+      console.log('Contract address:', CONTRACT_ADDRESS)
+      console.log('Provider type:', typeof provider)
+      console.log('Contract address type:', typeof CONTRACT_ADDRESS)
+      setContract(null)
     }
   }, [provider])
 
   const getContractWithSigner = () => {
-    if (!contract || !signer) {
-      throw new Error('Contract or signer not available')
+    console.log('=== GET CONTRACT WITH SIGNER ===')
+    console.log('Contract available:', !!contract)
+    console.log('Signer available:', !!signer)
+    
+    if (!contract) {
+      console.error('❌ Contract not available')
+      throw new Error('Contract not available')
     }
-    return contract.connect(signer)
+    
+    if (!signer) {
+      console.error('❌ Signer not available')
+      throw new Error('Signer not available')
+    }
+    
+    console.log('✅ Contract and signer available, connecting...')
+    const contractWithSigner = contract.connect(signer) as any
+    console.log('✅ Contract connected with signer')
+    return contractWithSigner
   }
+
+  type StickerInput = { name: string; imageUri: string; percentage: number }
 
   const createEvent = async (
     name: string,
     description: string,
     imageUri: string,
     startTime: Date,
-    endTime: Date
+    endTime: Date, 
+    stickers: StickerInput[] = []
   ) => {
     try {
       setLoading(true)
+
       const contractWithSigner = getContractWithSigner()
-      
+      if (!contractWithSigner) {
+        throw new Error("❌ Contract not available (getContractWithSigner returned undefined)")
+      }
+
       const startTimestamp = Math.floor(startTime.getTime() / 1000)
       const endTimestamp = Math.floor(endTime.getTime() / 1000)
+
+      console.log("📤 Sending createEvent transaction with:", {
+        name, description, imageUri, startTimestamp, endTimestamp, stickers
+      })
 
       const tx = await contractWithSigner.createEvent(
         name,
@@ -1020,33 +177,43 @@ export const useEventContract = () => {
 
       toast.loading('Creating event...', { id: 'create-event' })
       const receipt = await tx.wait()
-      
-      // Find the EventCreated event in the logs
-      const eventCreatedLog = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract?.interface.parseLog(log)
-          return parsed?.name === 'EventCreated'
-        } catch {
-          return false
-        }
-      })
+      console.log("✅ Transaction mined:", receipt)
 
       let eventId = 0
-      if (eventCreatedLog) {
-        const parsed = contract?.interface.parseLog(eventCreatedLog)
-        eventId = Number(parsed?.args.eventId)
+
+      try {
+        const iface = contractWithSigner.interface
+        const eventCreatedLog = receipt.logs.find((log: any) => {
+          try {
+            const parsed = iface.parseLog(log)
+            return parsed?.name === 'EventCreated'
+          } catch {
+            return false
+          }
+        })
+
+        if (eventCreatedLog) {
+          const parsed = iface.parseLog(eventCreatedLog)
+          eventId = Number(parsed?.args.eventId)
+        } else {
+          console.warn("⚠️ EventCreated log not found")
+        }
+      } catch (logParseError) {
+        console.error("❌ Failed to parse event logs:", logParseError)
       }
 
       toast.success('Event created successfully!', { id: 'create-event' })
       return { eventId, txHash: tx.hash }
+
     } catch (error: any) {
-      console.error('Error creating event:', error)
-      toast.error(error.reason || 'Failed to create event', { id: 'create-event' })
+      console.error('❌ Error creating event:', error)
+      toast.error(error?.reason || error?.message || 'Failed to create event', { id: 'create-event' })
       throw error
     } finally {
       setLoading(false)
     }
   }
+
 
   const createTicketTier = async (
     eventId: number,
@@ -1101,6 +268,30 @@ export const useEventContract = () => {
     }
   }
 
+  const createBlindBagReward = async (
+    eventId: number,
+    name: string,
+    metadataUri: string,
+    percentage: number
+  ) => {
+    try {
+      setLoading(true)
+      const contractWithSigner = getContractWithSigner()
+      const rarity = Math.max(1, Math.min(100, Math.floor(percentage)))
+      const tx = await contractWithSigner.createBlindBagReward(eventId, name, metadataUri, rarity)
+      toast.loading('Creating sticker...', { id: `create-sticker-${name}` })
+      const receipt = await tx.wait()
+      toast.success('Sticker created', { id: `create-sticker-${name}` })
+      return { txHash: tx.hash }
+    } catch (error: any) {
+      console.error('Error creating blind bag reward:', error)
+      toast.error(error?.reason || error?.message || 'Failed to create sticker')
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const purchaseTicket = async (tierId: number, quantity: number, totalPrice: string) => {
     try {
       setLoading(true)
@@ -1127,9 +318,12 @@ export const useEventContract = () => {
   }
 
   const getEvent = async (eventId: number): Promise<Event | null> => {
-    try {
-      if (!contract) return null
-      
+    if (!contract) {
+      console.error('❌ No contract found')
+      return null
+    }
+
+    try {      
       const eventData = await contract.events(eventId)
       return {
         eventId: Number(eventData.eventId),
@@ -1140,7 +334,8 @@ export const useEventContract = () => {
         startTime: Number(eventData.startTime),
         endTime: Number(eventData.endTime),
         isActive: eventData.isActive,
-        hasEnded: eventData.hasEnded
+        hasEnded: eventData.hasEnded, 
+        stickers: eventData.stickers || []
       }
     } catch (error) {
       console.error('Error getting event:', error)
@@ -1179,6 +374,48 @@ export const useEventContract = () => {
     } catch (error) {
       console.error('Error getting event tiers:', error)
       return []
+    }
+  }
+
+  const getEventRewardsDetails = async (eventId: number): Promise<BlindBagReward[]> => {
+    try {
+      if (!contract) return []
+      const rewardIds: bigint[] = await contract.getEventRewards(eventId)
+      const details = await Promise.all(
+        rewardIds.map(async (id) => {
+          const info = await contract.blindBagRewards(Number(id))
+          return {
+            rewardId: Number(info.rewardId),
+            eventId: Number(info.eventId),
+            name: info.name,
+            metadataUri: info.metadataUri,
+            rarity: Number(info.rarity),
+            isActive: Boolean(info.isActive)
+          } as BlindBagReward
+        })
+      )
+      return details.filter(r => r.isActive)
+    } catch (error) {
+      console.error('Error getting event rewards details:', error)
+      return []
+    }
+  }
+
+  const getReward = async (rewardId: number): Promise<BlindBagReward | null> => {
+    try {
+      if (!contract) return null
+      const info = await contract.blindBagRewards(rewardId)
+      return {
+        rewardId: Number(info.rewardId),
+        eventId: Number(info.eventId),
+        name: info.name,
+        metadataUri: info.metadataUri,
+        rarity: Number(info.rarity),
+        isActive: Boolean(info.isActive)
+      }
+    } catch (error) {
+      console.error('Error getting reward:', error)
+      return null
     }
   }
 
@@ -1255,9 +492,60 @@ export const useEventContract = () => {
     }
   }
 
+  const hasClaimedBlindBag = async (userAddress: string, eventId: number): Promise<boolean> => {
+    try {
+      if (!contract) return false
+      const result: boolean = await contract.hasClaimedBlindBag(userAddress, eventId)
+      return result
+    } catch (error) {
+      console.error('Error checking hasClaimedBlindBag:', error)
+      return false
+    }
+  }
+
+  const claimBlindBag = async (eventId: number): Promise<{ txHash: string, rewardId?: number }> => {
+    try {
+      setLoading(true)
+      const contractWithSigner = getContractWithSigner()
+      const tx = await contractWithSigner.claimBlindBag(eventId)
+
+      toast.loading('Claiming lucky draw...', { id: 'claim-blindbag' })
+      const receipt = await tx.wait()
+
+      // Try to parse rewardId from BlindBagClaimed event
+      let rewardId: number | undefined = undefined
+      try {
+        const iface = contractWithSigner.interface
+        const blindBagLog = receipt.logs.find((log: any) => {
+          try {
+            const parsed = iface.parseLog(log)
+            return parsed?.name === 'BlindBagClaimed'
+          } catch {
+            return false
+          }
+        })
+        if (blindBagLog) {
+          const parsed = iface.parseLog(blindBagLog)
+          rewardId = Number(parsed?.args?.rewardId)
+        }
+      } catch (parseError) {
+        console.warn('Unable to parse BlindBagClaimed event:', parseError)
+      }
+
+      toast.success('Lucky draw claimed!', { id: 'claim-blindbag' })
+      return { txHash: tx.hash, rewardId }
+    } catch (error: any) {
+      console.error('Error claiming blind bag:', error)
+      toast.error(error?.reason || error?.message || 'Failed to claim lucky draw', { id: 'claim-blindbag' })
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     contract,
-    loading,
+    loading: loading || !contract,
     isConnected,
     createEvent,
     createTicketTier,
@@ -1265,9 +553,14 @@ export const useEventContract = () => {
     getEvent,
     getTicketTier,
     getEventTiers,
+    createBlindBagReward,
+    getEventRewardsDetails,
+    getReward,
     getUserTickets,
     getTicket,
     useTicket,
     endEvent
+    ,hasClaimedBlindBag
+    ,claimBlindBag
   }
 }
