@@ -246,7 +246,7 @@ contract EventTicketing is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         // Generate pseudo-random reward
         uint256 randomSeed = uint256(keccak256(abi.encodePacked(
             block.timestamp,
-            block.difficulty,
+            block.prevrandao,
             msg.sender,
             _eventId
         ))) % 100 + 1;

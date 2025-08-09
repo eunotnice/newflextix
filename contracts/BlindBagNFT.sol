@@ -77,7 +77,7 @@ contract BlindBagNFT is ERC721, ERC721URIStorage, Ownable {
         
         uint256 templateIndex = uint256(keccak256(abi.encodePacked(
             block.timestamp,
-            block.difficulty,
+            block.prevrandao,
             _to,
             tokenId
         ))) % templates.length;
@@ -106,7 +106,7 @@ contract BlindBagNFT is ERC721, ERC721URIStorage, Ownable {
     function _generateRandomRarity() internal view returns (Rarity) {
         uint256 randomNum = uint256(keccak256(abi.encodePacked(
             block.timestamp,
-            block.difficulty,
+            block.prevrandao,
             msg.sender
         ))) % 1000;
         

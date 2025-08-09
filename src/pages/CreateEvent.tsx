@@ -16,7 +16,7 @@ interface TicketTierForm {
 const CreateEvent: React.FC = () => {
   const navigate = useNavigate()
   const { isConnected, connectWallet } = useWeb3()
-  const { createEvent, createTicketTier, loading } = useEventContract()
+  const { createEvent, createTicketTier, createBlindBagReward, loading } = useEventContract()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -37,6 +37,12 @@ const CreateEvent: React.FC = () => {
       description: 'Standard event access'
     }
   ])
+
+  type StickerForm = { name: string; imageUri: string; percentage: number }
+  const [stickers, setStickers] = useState<StickerForm[]>([
+    { name: '', imageUri: '', percentage: 50 },
+    { name: '', imageUri: '', percentage: 50 }
+  ]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -67,7 +73,7 @@ const CreateEvent: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!isConnected) {
       await connectWallet()
       return
@@ -97,14 +103,39 @@ const CreateEvent: React.FC = () => {
       // Use a default image if none provided
       const imageUri = formData.imageUri || `https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=400&fit=crop`
 
-      // Create the event
+      // Validate stickers: must have at least 2; each 1..99; sum percentages to exactly 100
+      const cleanedStickers = stickers
+        .map(s => ({ name: s.name.trim(), imageUri: s.imageUri.trim(), percentage: Number(s.percentage) }))
+        .filter(s => s.name && s.imageUri && !Number.isNaN(s.percentage))
+      if (cleanedStickers.length < 2) {
+        toast.error('Please add at least two stickers (name, image, percentage)')
+        return
+      }
+      if (cleanedStickers.some(s => !Number.isInteger(s.percentage) || s.percentage < 1 || s.percentage > 99)) {
+        toast.error('Each sticker percentage must be an integer between 1 and 99')
+        return
+      }
+      const totalPct = cleanedStickers.reduce((sum, s) => sum + s.percentage, 0)
+      if (totalPct !== 100) {
+        toast.error('Sticker percentages must add up to exactly 100')
+        return
+      }
+
+      // Create the event with stickers included
+      // Assuming your createEvent function accepts stickers as an argument
       const { eventId } = await createEvent(
         formData.name,
         formData.description,
         imageUri,
         startDateTime,
-        endDateTime
+        endDateTime,
+        cleanedStickers  // pass structured stickers
       )
+
+      // Create stickers (blind bag rewards) on-chain
+      for (const s of cleanedStickers) {
+        await createBlindBagReward(eventId, s.name, s.imageUri, s.percentage)
+      }
 
       // Create ticket tiers
       for (const tier of ticketTiers) {
@@ -124,8 +155,10 @@ const CreateEvent: React.FC = () => {
       navigate(`/events/${eventId}`)
     } catch (error) {
       console.error('Error creating event:', error)
+      toast.error('Failed to create event')
     }
   }
+
 
   if (!isConnected) {
     return (
@@ -208,7 +241,33 @@ const CreateEvent: React.FC = () => {
                     placeholder="https://example.com/image.jpg (optional - default will be used)"
                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
+
+                  {/* Beautiful centered image preview */}
+                  {formData.imageUri && (
+                    <div className="flex justify-center mt-4">
+                      <div className="relative w-64 h-40 rounded-xl overflow-hidden border-2 border-purple-600 shadow-lg bg-gradient-to-tr from-purple-700 via-purple-900 to-black">
+                        <img
+                          src={formData.imageUri}
+                          alt="Event preview"
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={(e) => {
+                            e.currentTarget.style.display = 'block';
+                          }}
+                        />
+                        {/* Optional overlay label */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-purple-900 bg-opacity-60 text-white text-center py-1 text-sm font-medium select-none">
+                          Preview
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+
+
 
                 <div>
                   <label className="block text-white font-semibold mb-2">
@@ -318,11 +377,19 @@ const CreateEvent: React.FC = () => {
                           Price (ETH)
                         </label>
                         <input
-                          type="number"
-                          step="0.001"
-                          min="0"
+                          type="text"
+                          inputMode="decimal"          // numeric keyboard with decimal point on mobiles
                           value={tier.price}
-                          onChange={(e) => handleTierChange(index, 'price', e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // Allow empty string OR a number with up to 2 decimals, no negative
+                            if (
+                              val === "" || 
+                              /^(\d+)?(\.\d{0,2})?$/.test(val)
+                            ) {
+                              handleTierChange(index, 'price', val);
+                            }
+                          }}
                           placeholder="0.01"
                           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
@@ -331,10 +398,17 @@ const CreateEvent: React.FC = () => {
                       <div>
                         <label className="block text-white font-semibold mb-2">Max Supply</label>
                         <input
-                          type="number"
-                          min="1"
+                          type="text"              // changed from number to text
+                          inputMode="numeric"      // numeric keyboard on mobile
                           value={tier.maxSupply}
-                          onChange={(e) => handleTierChange(index, 'maxSupply', parseInt(e.target.value) || 1)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (/^\d*$/.test(val)) {   // allow only digits (empty allowed to delete)
+                              // Prevent empty string going to 0 or 1? You can adjust here:
+                              // For now, just pass the string value and parse later if needed
+                              handleTierChange(index, 'maxSupply', val);
+                            }
+                          }}
                           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
@@ -342,16 +416,108 @@ const CreateEvent: React.FC = () => {
                       <div>
                         <label className="block text-white font-semibold mb-2">Max Per Wallet</label>
                         <input
-                          type="number"
-                          min="1"
+                          type="text"
+                          inputMode="numeric"
                           value={tier.maxPerWallet}
-                          onChange={(e) => handleTierChange(index, 'maxPerWallet', parseInt(e.target.value) || 1)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (/^\d*$/.test(val)) {
+                              handleTierChange(index, 'maxPerWallet', val);
+                            }
+                          }}
                           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                         />
                       </div>
+
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-white">Stickers (min 2)</h2>
+                <button
+                  type="button"
+                  onClick={() => setStickers(prev => [...prev, { name: '', imageUri: '', percentage: 1 }])}
+                  className="flex items-center bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Add Sticker
+                </button>
+              </div>
+
+              <p className="text-purple-200 text-sm mb-4">Percentages are used for future lucky draw odds. Each must be 1–99 and total must equal 100.</p>
+
+              <div className="space-y-4">
+                {stickers.map((s, i) => (
+                  <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="md:col-span-4">
+                      <label className="block text-white font-semibold mb-2">Name</label>
+                      <input
+                        type="text"
+                        value={s.name}
+                        onChange={(e) => setStickers(prev => prev.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))}
+                        placeholder="e.g., Gold Badge"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-6">
+                      <label className="block text-white font-semibold mb-2">Image URL</label>
+                      <input
+                        type="url"
+                        value={s.imageUri}
+                        onChange={(e) => setStickers(prev => prev.map((x, idx) => idx === i ? { ...x, imageUri: e.target.value } : x))}
+                        placeholder="https://example.com/sticker.png"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-white font-semibold mb-2">Percentage</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={99}
+                        step={1}
+                        value={s.percentage}
+                        onChange={(e) => {
+                          const val = Number(e.target.value)
+                          if (!Number.isNaN(val) && val >= 1 && val <= 99) {
+                            setStickers(prev => prev.map((x, idx) => idx === i ? { ...x, percentage: val } : x))
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-12 flex justify-end">
+                      {stickers.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setStickers(prev => prev.filter((_, idx) => idx !== i))}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total percentage indicator */}
+              <div className="mt-4 text-right">
+                {(() => {
+                  const total = stickers.reduce((sum, s) => sum + Number(s.percentage || 0), 0)
+                  const ok = total === 100
+                  return (
+                    <span className={`text-sm font-semibold ${ok ? 'text-green-300' : 'text-red-300'}`}>
+                      Total: {total}% {ok ? '' : '(must equal 100%)'}
+                    </span>
+                  )
+                })()}
               </div>
             </div>
 

@@ -100,6 +100,11 @@ const MyTickets: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tickets.map((ticket, index) => {
+              console.log('Rendering ticket:', {
+                tokenId: ticket.tokenId,
+                eventId: ticket.eventId,
+                owner: ticket.owner,
+              });
               const status = getEventStatus(ticket.event)
               const showLuckyDot = (() => {
                 if (!ticket.event) return false
@@ -216,6 +221,7 @@ const MyTickets: React.FC = () => {
                       <>
                         <Link
                           to={`/ticketdetails/${ticket.tokenId}`}
+                          onClick={() => console.log('Clicked ticket details for tokenId:', ticket.tokenId)}
                           className="mt-4 block w-full bg-white/10 hover:bg-white/20 text-white text-center py-2 rounded-lg transition-colors text-sm font-semibold"
                         >
                           View Ticket Details

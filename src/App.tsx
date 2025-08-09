@@ -26,7 +26,7 @@ function App() {
                 <Route path="/events/:id" element={<EventDetails />} />
                 <Route path="/create-event" element={<CreateEvent />} />
                 <Route path="/my-tickets" element={<MyTickets />} />
-                <Route path="/ticketdetails/:tokenId" element={<TicketDetails />} />
+                <Route path="/ticketdetails/:id" element={<TicketDetails />} />
                 <Route path="/profile" element={<Profile />} />
               </Routes>
             </main>
